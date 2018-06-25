@@ -267,6 +267,7 @@ def blockSystolicMultiply2D(sys, A, B, verbose = True):
                     print('A', padArray(sr,sc,A[rstart: rend, cstart: cend]))
                     print('B', padArray(sc,sc,B[cstart:cend, bcstart: bcend]))
                 clks, m,deleteTime = backrunSystolic(sys, padArray(sr,sc,A[rstart: rend, cstart: cend]), padArray(sc,sc,B[cstart:cend, bcstart: bcend]), verbose = verbose )
+                clocks = clks
                 if(verbose):
                     print('out',m)
                 out[rstart:rend, bcstart:bcend] += m[0:rend-rstart,0:bcend - bcstart]
@@ -289,7 +290,7 @@ def check_same(a,b):
         return True
 
 
-a = np.array([
+"""a = np.array([
 [1,2,3],
 [1,2,3],
 ])
@@ -297,7 +298,12 @@ b = np.array([
 [1,2,3],
 [1,2,3],
 [1,2,3]
-])
-sys = initSystolic(1, 1)
-l,m,k = blockSystolicMultiply2D(sys, a, b, verbose = False)
-print('final',l)
+])"""
+
+a = np.random.randint(low = 0, high = 10, size = (100,100))
+b = np.random.randint(low = 0, high = 10, size = (100,100))
+
+sys = initSystolic(32, 32)
+out,blockiterations, clocks = blockSystolicMultiply2D(sys, a, b, verbose = False)
+print(np.matmul(a,b))
+print('final',out)
