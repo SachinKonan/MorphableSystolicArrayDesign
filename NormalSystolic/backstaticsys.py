@@ -229,25 +229,53 @@ def blockSystolicMultiply(sys, A, B, verbose = True):
         print('Total Number of Systolic Iterations: %s' %(trackiterations))
     return out, trackiterations, clocks, total_time
 
-#sys = initSystolic(2,1)
+import math
+def blockSystolicMultiply2D(sys, A, B, verbose = True):
+    sr = len(sys)
+    sc = len(sys[0])
 
-A = np.array([
-[1,2,3,4,5,6,7,8],
-[1,2,3,4,5,6,7,8],
-[1,2,3,4,5,6,7,8],
-[1,2,3,4,5,6,7,8]
-])
+    Ar = len(A)
+    Ac = len(A[0])
 
-B = np.array([
-[1],
-[2],
-[3],
-[4],
-[5],
-[6],
-[7],
-[8]
-])
+    Br = len(B)
+    Bc = len(B[0])
+
+    matChecker(Ac, Br)
+    out = np.zeros((Ar,Bc))
+    trackiterations = 0
+    clocks = 0
+    print(math.ceil(Bc/sc))
+
+    for r in range(0, math.ceil(Ar/sr)):
+        rstart = r*sr
+        rend = rstart + sr
+        if(rend > Ar):
+            rend = Ar
+        for c in range(0, math.ceil(Ac/sc)):
+            cstart = c*sc
+            cend = cstart + sc
+            if(cend > Ac):
+                cend = Ac
+            #print('A', padArray(sr,sc,A[rstart: rend, cstart: cend]))
+            for bc in range(0, math.ceil(Bc/sc)):
+                bcstart = bc*sc
+                bcend = bcstart + sc
+                if(bcend > Bc):
+                    bcend = Bc
+                #print('B', padArray(sc,sc,B[cstart:cend, bcstart: bcend]))
+                if(verbose):
+                    print('A', padArray(sr,sc,A[rstart: rend, cstart: cend]))
+                    print('B', padArray(sc,sc,B[cstart:cend, bcstart: bcend]))
+                clks, m,deleteTime = backrunSystolic(sys, padArray(sr,sc,A[rstart: rend, cstart: cend]), padArray(sc,sc,B[cstart:cend, bcstart: bcend]), verbose = verbose )
+                if(verbose):
+                    print('out',m)
+                out[rstart:rend, bcstart:bcend] += m[0:rend-rstart,0:bcend - bcstart]
+                sys = initSystolic(sr, sc)
+                trackiterations+=1
+    if verbose:
+        print('Total Number of Systolic Iterations: %s' %(trackiterations))
+    return out, trackiterations, clocks
+
 
 def check_same(a,b):
     if(a.shape != b.shape):
@@ -259,120 +287,17 @@ def check_same(a,b):
             else:
                 pass
         return True
-A = np.random.rand(512,512)
-B = np.random.rand(512, 1)
-"""
+
+
 a = np.array([
 [1,2,3],
 [1,2,3],
-[1,2,3]
 ])
 b = np.array([
 [1,2,3],
 [1,2,3],
 [1,2,3]
 ])
-sys = initSystolic(3, 3)
-outs, reps,cs = backrunSystolic(sys, a, b, True)
-#print(outs[0:100].T)
-#print(np.dot(A,B)[0:100].T)
-"""
-
-clocks = []
-repetitions = []
-memory = []
-tim = []
-
-shapes = np.arange(1, 256, 1)
-for i in shapes:
-    sys = initSystolic(i, 1)
-    outs, reps, cs, t = blockSystolicMultiply(sys, A, B, False)
-    tim.append(t)
-    memory.append(i**2)
-    clocks.append(cs)
-    repetitions.append(reps)
-    print('Finished Systolic%s' %(i))
-
-b = np.argmin(tim)
-plt.plot(shapes[b], tim[b], marker = 'o', markersize = 3, color = 'red')
-plt.plot(shapes,tim)
-plt.title('Simulator Time')
-plt.ylabel('Time(s)')
-plt.xlabel('Systolic size')
-plt.show()
-print('Optimal size time: %s' %(tim[b]))
-print('Max size(256) time: %s' % (tim[-1]))
-print('Real Size to minimize loss: %s' %(b))
-print('Real Size speedup: %s' % (tim[-1]/tim[b]))
-clocks = np.array(clocks)
-repetitions = np.array(repetitions)
-memory = np.array(memory)
-
-total_loss = np.multiply(repetitions, np.add(memory_time*memory, clock_time*clocks))
-
-best_size = np.argmin(total_loss)
-speed_diff = total_loss[-1]/total_loss[best_size]
-
-print('Optimal Size to minimize loss: %s' %(best_size))
-print('Optimal Size speedup: %s' % (speed_diff))
-plt.plot(shapes, total_loss, label = 'added')
-#plt.plot(shapes, memory, label = 'memory' )
-#plt.plot(shapes, clocks, label = 'clocks')
-#plt.plot(shapes, repetitions/(100**2), label = 'repetitions')
-plt.legend()
-plt.show()
-
-
-"""
-its = []
-reps = []
-for i in range(1, 100):
-    sys = initSystolic(i, 1)
-    out, trackits,b = blockSystolicMultiply(sys, A, B, False)
-    its.append(trackits)
-    reps.append(b)
-    #print('Finished Systolic Row Size %s, Number of its:%s'%  (i, trackits) )
-
-
-***WHY MEMORY ACCESS MATTERS (example matrix is 600 by 600)
-256x256 matrix unit, it takes 9 steps to tile 600x600, for a total of 18 us of time.
-The larger 512x512 unit requires only four steps, but each step takes four times longer, for 32 us of time.
-
-print(its)
-for i in range(1, 100):
-    print('For srow size%s, the expected number of iterations is: %s' % (i, math.ceil(len(A)/ i) * math.ceil(len(A[0])/i) ) )
-
-mem = []
-for i in range(1, 100):
-    mem.append(math.ceil(len(A)/ i) * math.ceil(len(A[0])/i) *(i**2 + i))
-    print('For srow size%s, the expected value of memory loss is: %s ' % (i, mem[-1]) )
-
-zeros = []
-for i in range(1, 100):
-    zeros.append(  (i *math.ceil(len(A)/ i) * i*math.ceil(len(A[0])/i) )  - (len(A) * len(A[0]) ) )
-    print('For srow size%s, the expected value of zeros loss is: %s ' % (i, zeros[-1]) )
-
-for i in range(1, 100):
-    print('For srow size%s, the expected value of zeros loss is: %s ' % (i, reps[i-1]) )
-
-import matplotlib.pyplot as plt
-plt.plot(np.arange(1,100), reps, label = 'propogation')
-plt.plot(np.arange(1,100),zeros, label = 'zeros')
-plt.plot(np.arange(1,100), mem, label = 'memory')
-plt.plot(np.arange(1,100), its, label = 'repitions')
-plt.xlabel('Systolic Row Size')
-plt.ylabel('ALL')
-plt.legend()
-plt.title('Loss')
-plt.show()
-
-
-total = np.add(np.multiply(its, np.add(mem, reps)), zeros)
-print(len(total))
-plt.plot(np.arange(1,100), total)
-plt.title('Combined Loss')
-plt.xlabel('Systolic Row Size')
-plt.ylabel('Summed Loss')
-plt.show()
-
-"""
+sys = initSystolic(1, 1)
+l,m,k = blockSystolicMultiply2D(sys, a, b, verbose = False)
+print('final',l)
